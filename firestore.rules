@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidEnquiry() {
+      let data = request.resource.data;
+      return data.firstName is string && data.firstName.size() >= 2 && data.firstName.size() <= 100
+          && data.lastName is string && data.lastName.size() >= 2 && data.lastName.size() <= 100
+          && data.email is string && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
+          && data.inquiryType in ['technical', 'sales', 'partnership', 'amc']
+          && data.message is string && data.message.size() >= 10 && data.message.size() <= 5000
+          && data.status == 'new';
+    }
+
+    function isValidQuote() {
+      let data = request.resource.data;
+      return data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100
+          && data.email is string && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
+          && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 20
+          && data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 200
+          && data.quantity is number && data.quantity >= 1
+          && data.status == 'new';
+    }
+
+    // Enquiries Collection:
+    // - Public can create with valid schema
+    // - Only authenticated administrators can read, update status, and delete
+    match /enquiries/{enquiryId} {
+      allow create: if isValidEnquiry();
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // Quotes Collection:
+    // - Public can create with valid schema
+    // - Only authenticated administrators can read, update status, and delete
+    match /quotes/{quoteId} {
+      allow create: if isValidQuote();
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // Default: Deny access to any other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

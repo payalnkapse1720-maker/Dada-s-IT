@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productQuoteSchema } from "@/lib/validations";
 import { ProductQuoteFormData, Product } from "@/types";
-import { X, CheckCircle2, Send, Loader2, PackageCheck } from "lucide-react";
+import { createQuote } from "@/lib/firebase/quotes";
+import { X, CheckCircle2, Send, Loader2, PackageCheck, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductQuoteModalProps {
@@ -21,6 +22,7 @@ export default function ProductQuoteModal({
 }: ProductQuoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -37,12 +39,21 @@ export default function ProductQuoteModal({
 
   const onSubmit = async (data: ProductQuoteFormData) => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Product Quote Submitted:", data);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    reset();
+    setSubmitError(null);
+    try {
+      await createQuote(data);
+      setIsSuccess(true);
+      reset();
+    } catch (err: any) {
+      console.error("Failed to submit quotation request:", err);
+      setSubmitError(
+        "Something went wrong while sending your quotation request. Please try again or contact us directly."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   if (!isOpen || !product) return null;
 
@@ -98,6 +109,13 @@ export default function ProductQuoteModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {submitError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-error/20 text-error text-xs flex items-center gap-2 font-medium">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
               <input type="hidden" value={product.name} {...register("productName")} />
 
               <div>
