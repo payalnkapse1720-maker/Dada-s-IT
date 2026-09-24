@@ -89,6 +89,8 @@ export interface FAQItem {
   category: "General" | "Services" | "Support & AMC" | "Security";
 }
 
+export type EnquiryStatus = "new" | "contacted" | "in-progress" | "converted" | "closed";
+
 export interface InquiryFormData {
   firstName: string;
   lastName: string;
@@ -97,6 +99,15 @@ export interface InquiryFormData {
   inquiryType: "technical" | "sales" | "partnership" | "amc";
   message: string;
 }
+
+export interface EnquiryRecord extends InquiryFormData {
+  id: string;
+  status: EnquiryStatus;
+  createdAt: any;
+  updatedAt?: any;
+}
+
+export type QuoteStatus = "new" | "contacted" | "quoted" | "accepted" | "rejected" | "closed";
 
 export interface ProductQuoteFormData {
   fullName: string;
@@ -107,3 +118,11 @@ export interface ProductQuoteFormData {
   quantity: number;
   notes?: string;
 }
+
+export interface QuoteRecord extends ProductQuoteFormData {
+  id: string;
+  status: QuoteStatus;
+  createdAt: any;
+  updatedAt?: any;
+}
+

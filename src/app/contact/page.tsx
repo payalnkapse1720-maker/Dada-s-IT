@@ -2,6 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import { Mail, Phone, MapPin, Clock, ShieldCheck, CheckCircle2, Headphones, AlertTriangle } from "lucide-react";
 import ConsultationForm from "@/components/forms/ConsultationForm";
+import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 
 export const metadata: Metadata = {
   title: "Consult an Expert & Contact | DADA'S I.T Services & Security Solutions",
@@ -12,8 +13,17 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="pt-24 pb-16 bg-background">
+      {/* Breadcrumb Navigation */}
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 pt-6">
+        <PageBreadcrumb
+          items={[{ label: "Contact Us" }]}
+          backLabel="Back to Home"
+          backHref="/"
+        />
+      </div>
+
       {/* Header */}
-      <section className="py-16 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-4 font-manrope">
           <Headphones className="w-3.5 h-3.5" />
           <span>Direct Engineering Access</span>
@@ -42,9 +52,9 @@ export default function ContactPage() {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-on-surface font-manrope">Primary Operations Hub</div>
+                    <div className="font-bold text-on-surface font-manrope">Pan-India Operations &amp; Headquarters</div>
                     <p className="text-xs mt-0.5 leading-relaxed">
-                      Pune &amp; Mumbai Metropolitan Region, Maharashtra, India
+                      Headquartered in Maharashtra with Nationwide On-Site Deployment &amp; SLA Engineering Teams Across All Over India
                     </p>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { BookOpen, Clock, User, ArrowRight, ShieldCheck, Tag } from "lucide-react";
 import { insightsData } from "@/data/insights";
 import CTASection from "@/components/sections/CTASection";
+import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 
 export const metadata: Metadata = {
   title: "Insights & Technical Resources | DADA'S I.T Services & Security Solutions",
@@ -18,8 +19,17 @@ export default function InsightsPage() {
 
   return (
     <div className="pt-24 pb-16 bg-background">
+      {/* Breadcrumb Navigation */}
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 pt-6">
+        <PageBreadcrumb
+          items={[{ label: "Insights & Whitepapers" }]}
+          backLabel="Back to Home"
+          backHref="/"
+        />
+      </div>
+
       {/* Header */}
-      <section className="py-16 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-4 font-manrope">
           <BookOpen className="w-3.5 h-3.5" />
           <span>Engineering Thought Leadership</span>
