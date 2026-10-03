@@ -89,7 +89,144 @@ export interface FAQItem {
   category: "General" | "Services" | "Support & AMC" | "Security";
 }
 
-export type EnquiryStatus = "new" | "contacted" | "in-progress" | "converted" | "closed";
+// ==========================================
+// Cloud Firestore Database Schema & Models
+// ==========================================
+
+// 1. Admins Collection
+export type AdminRole = "super_admin" | "content_manager";
+
+export interface AdminDoc {
+  adminId: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  isActive: boolean;
+  profileImage: string;
+  lastLogin: any;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 2. Categories Collection
+export interface CategoryDoc {
+  categoryId: string;
+  name: string;
+  slug: string;
+  description: string;
+  image: string;
+  icon: string;
+  isActive: boolean;
+  order: number;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 3. Products Collection
+export interface ProductDoc {
+  productId: string;
+  name: string;
+  slug: string;
+  categoryId: string;
+  categoryName: string;
+  brand: string;
+  description: string;
+  shortDescription: string;
+  price: number;
+  mrp: number;
+  discount: number;
+  currency: string;
+  sku: string;
+  images: string[];
+  thumbnail: string;
+  specifications: Record<string, string>;
+  features: string[];
+  availability: "in_stock" | "out_of_stock" | "on_order";
+  stockQuantity: number;
+  condition: "new" | "refurbished";
+  warranty: string;
+  isFeatured: boolean;
+  isActive: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 4. Services Collection
+export interface ServiceDoc {
+  serviceId: string;
+  name: string;
+  slug: string;
+  description: string;
+  icon: string;
+  image: string;
+  isActive: boolean;
+  order: number;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 5. Projects Collection
+export interface ProjectDoc {
+  projectId: string;
+  title: string;
+  slug: string;
+  clientName: string;
+  location: string;
+  category: string;
+  description: string;
+  services: string[];
+  images: string[];
+  technologies: string[];
+  year: string;
+  isFeatured: boolean;
+  isActive: boolean;
+  createdAt: any;
+  updatedAt: any;
+}
+
+// 6. Enquiries Collection
+export type EnquiryType =
+  | "product"
+  | "service"
+  | "general"
+  | "technical"
+  | "sales"
+  | "partnership"
+  | "amc";
+
+export type EnquiryStatus =
+  | "new"
+  | "pending"
+  | "contacted"
+  | "in-progress"
+  | "in_progress"
+  | "converted"
+  | "resolved"
+  | "closed";
+
+export interface EnquiryDoc {
+  enquiryId: string;
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  company: string;
+  type: EnquiryType;
+  productId: string;
+  productName: string;
+  serviceId: string;
+  serviceName: string;
+  message: string;
+  status: EnquiryStatus;
+  source: string;
+  createdAt: any;
+  updatedAt: any;
+  // Legacy / Form compatibility fields
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  inquiryType?: string;
+}
 
 export interface InquiryFormData {
   firstName: string;
@@ -98,16 +235,47 @@ export interface InquiryFormData {
   phone?: string;
   inquiryType: "technical" | "sales" | "partnership" | "amc";
   message: string;
+  company?: string;
+  type?: EnquiryType;
+  productId?: string;
+  productName?: string;
+  serviceId?: string;
+  serviceName?: string;
 }
 
-export interface EnquiryRecord extends InquiryFormData {
+export type EnquiryRecord = EnquiryDoc;
+
+// 7. Quotes Collection
+export type QuoteStatus =
+  | "new"
+  | "pending"
+  | "contacted"
+  | "quoted"
+  | "accepted"
+  | "rejected"
+  | "closed";
+
+export interface QuoteDoc {
+  quoteId: string;
   id: string;
-  status: EnquiryStatus;
+  name: string;
+  email: string;
+  mobile: string;
+  company: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  message: string;
+  status: QuoteStatus;
+  source: string;
   createdAt: any;
-  updatedAt?: any;
+  updatedAt: any;
+  // Legacy / Form compatibility fields
+  fullName?: string;
+  phone?: string;
+  companyName?: string;
+  notes?: string;
 }
-
-export type QuoteStatus = "new" | "contacted" | "quoted" | "accepted" | "rejected" | "closed";
 
 export interface ProductQuoteFormData {
   fullName: string;
@@ -117,12 +285,36 @@ export interface ProductQuoteFormData {
   productName: string;
   quantity: number;
   notes?: string;
+  productId?: string;
+  company?: string;
+  mobile?: string;
+  message?: string;
 }
 
-export interface QuoteRecord extends ProductQuoteFormData {
-  id: string;
-  status: QuoteStatus;
-  createdAt: any;
-  updatedAt?: any;
+export type QuoteRecord = QuoteDoc;
+
+// 8. Website Content Collection
+export interface HomepageContentDoc {
+  heroTitle: string;
+  heroSubtitle: string;
+  heroDescription: string;
+  heroImage: string;
+  ctaText: string;
+  ctaLink: string;
+  updatedAt: any;
 }
 
+export interface ContactContentDoc {
+  address: string;
+  phone: string;
+  email: string;
+  whatsapp: string;
+  updatedAt: any;
+}
+
+export interface AboutContentDoc {
+  title: string;
+  description: string;
+  image: string;
+  updatedAt: any;
+}

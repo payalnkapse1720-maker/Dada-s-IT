@@ -1,47 +1,93 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { PlusCircle, Edit3, Trash2, Wrench, Shield } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
 import AdminDataTable, { Column } from "@/components/admin/AdminDataTable";
 import AdminConfirmDialog from "@/components/admin/AdminConfirmDialog";
-import { Service } from "@/types";
+import AdminLoadingState from "@/components/admin/AdminLoadingState";
+import { ServiceDoc } from "@/types";
+import { subscribeServices, deleteService } from "@/lib/firebase/services";
 
 export default function AdminServicesPage() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [selectedToDelete, setSelectedToDelete] = useState<Service | null>(null);
+  const [services, setServices] = useState<ServiceDoc[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedToDelete, setSelectedToDelete] = useState<ServiceDoc | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const columns: Column<Service>[] = [
+  useEffect(() => {
+    setIsLoading(true);
+    const unsubscribe = subscribeServices(
+      (data) => {
+        setServices(data);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Failed to load services from Firestore:", err);
+        setIsLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleDelete = async () => {
+    if (!selectedToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteService(selectedToDelete.serviceId);
+      setSelectedToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete service:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const columns: Column<ServiceDoc>[] = [
     {
-      header: "Service Title",
+      header: "Service ID & Name",
       accessor: (item) => (
         <div>
-          <div className="font-bold text-on-surface">{item.title}</div>
-          <div className="text-[11px] text-on-surface-variant font-mono">{item.slug}</div>
+          <div className="font-bold text-on-surface">{item.name}</div>
+          <div className="text-[11px] text-on-surface-variant font-mono">{item.serviceId} • {item.slug}</div>
         </div>
       ),
     },
     {
-      header: "Category",
+      header: "Icon",
       accessor: (item) => (
         <span className="capitalize px-2.5 py-0.5 rounded-full bg-surface-container font-semibold text-[11px]">
-          {item.category}
+          {item.icon || "laptop"}
         </span>
       ),
     },
     {
-      header: "SLA Commitment",
+      header: "Order",
       accessor: (item) => (
-        <span className="font-medium text-primary text-xs">{item.sla}</span>
+        <span className="font-mono text-xs text-on-surface-variant">#{item.order}</span>
       ),
     },
     {
-      header: "Features",
-      accessor: (item) => `${item.features?.length || 0} items`,
+      header: "Status",
+      accessor: (item) => (
+        <span
+          className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] ${
+            item.isActive !== false
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {item.isActive !== false ? "Active" : "Inactive"}
+        </span>
+      ),
     },
   ];
+
+  if (isLoading) {
+    return <AdminLoadingState message="Loading services offerings from Cloud Firestore..." />;
+  }
 
   return (
     <div className="space-y-6">
@@ -49,7 +95,7 @@ export default function AdminServicesPage() {
 
       <AdminPageHeader
         title="Services Management"
-        subtitle="Configure infrastructure, security, and facility AMC service offerings."
+        subtitle="Configure IT repair, CCTV, networking, AMC and consulting service offerings in Cloud Firestore."
       >
         <Link
           href="/admin/services/new"
@@ -60,12 +106,12 @@ export default function AdminServicesPage() {
         </Link>
       </AdminPageHeader>
 
-      <AdminDataTable<Service>
+      <AdminDataTable<ServiceDoc>
         columns={columns}
         data={services}
-        keyExtractor={(s) => s.id}
-        searchPlaceholder="Search services by title, category, or slug..."
-        searchKeys={["title", "category", "slug", "shortDescription"]}
+        keyExtractor={(s) => s.serviceId}
+        searchPlaceholder="Search services by title, slug, or ID..."
+        searchKeys={["name", "slug", "serviceId", "description"]}
         emptyTitle="No services in Firestore yet"
         emptyDescription="Create your first enterprise service offering or package."
         emptyActionLabel="Add Service Package"
@@ -73,7 +119,7 @@ export default function AdminServicesPage() {
         actions={(item) => (
           <>
             <Link
-              href={`/admin/services/${item.id}/edit`}
+              href={`/admin/services/${item.serviceId}/edit`}
               className="p-1.5 rounded-lg border border-outline-variant/30 hover:bg-surface-container text-on-surface-variant hover:text-primary transition-colors"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -91,11 +137,8 @@ export default function AdminServicesPage() {
       <AdminConfirmDialog
         isOpen={Boolean(selectedToDelete)}
         title="Delete Service"
-        message={`Are you sure you want to delete service "${selectedToDelete?.title}"?`}
-        onConfirm={() => {
-          setServices((prev) => prev.filter((s) => s.id !== selectedToDelete?.id));
-          setSelectedToDelete(null);
-        }}
+        message={`Are you sure you want to delete service "${selectedToDelete?.name}" (${selectedToDelete?.serviceId})?`}
+        onConfirm={handleDelete}
         onCancel={() => setSelectedToDelete(null)}
       />
     </div>

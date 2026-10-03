@@ -1,42 +1,58 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Plus, Trash2, Loader2, Sparkles } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
-
-const defaultCategories = [
-  "Networking Equipment",
-  "CCTV & Surveillance",
-  "Biometric & Access Control",
-  "Servers & Storage",
-  "Laptops & Desktops",
-  "Computer Components (RAM/SSD/GPU)",
-  "Power & UPS Automation",
-];
+import { createProduct } from "@/lib/firebase/products";
+import { getCategories } from "@/lib/firebase/categories";
+import { CategoryDoc } from "@/types";
 
 export default function AdminNewProductPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<CategoryDoc[]>([]);
+
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
-    category: defaultCategories[0],
+    categoryId: "cat_001",
+    categoryName: "Computers & Laptops",
     brand: "",
-    price: "Custom Quote",
-    rating: 5,
-    inStock: true,
-    featured: false,
-    badge: "",
-    image: "",
+    price: 0,
+    mrp: 0,
+    discount: 0,
+    currency: "INR",
+    sku: "",
     description: "",
+    shortDescription: "",
+    image: "",
+    availability: "in_stock" as "in_stock" | "out_of_stock" | "on_order",
+    stockQuantity: 10,
+    condition: "new" as "new" | "refurbished",
+    warranty: "3-Year Hardware Warranty",
+    featured: false,
+    isActive: true,
   });
 
   const [specs, setSpecs] = useState<{ key: string; value: string }[]>([
     { key: "Warranty", value: "3-Year Hardware Replacement" },
   ]);
+
+  useEffect(() => {
+    getCategories().then((cats) => {
+      if (cats.length > 0) {
+        setCategoriesList(cats);
+        setFormData((prev) => ({
+          ...prev,
+          categoryId: cats[0].categoryId,
+          categoryName: cats[0].name,
+        }));
+      }
+    }).catch((err) => console.error("Failed to load categories:", err));
+  }, []);
 
   const handleNameChange = (name: string) => {
     const generatedSlug = name
@@ -47,6 +63,15 @@ export default function AdminNewProductPage() {
       ...prev,
       name,
       slug: generatedSlug,
+    }));
+  };
+
+  const handleCategoryChange = (categoryId: string) => {
+    const found = categoriesList.find((c) => c.categoryId === categoryId);
+    setFormData((prev) => ({
+      ...prev,
+      categoryId,
+      categoryName: found ? found.name : prev.categoryName,
     }));
   };
 
@@ -66,11 +91,47 @@ export default function AdminNewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) return;
+
     setIsSubmitting(true);
-    // Simulating save / Firestore addDoc() in future phase
-    await new Promise((res) => setTimeout(res, 600));
-    setIsSubmitting(false);
-    router.push("/admin/products");
+    try {
+      const specificationsMap: Record<string, string> = {};
+      specs.forEach((s) => {
+        if (s.key.trim()) specificationsMap[s.key.trim()] = s.value.trim();
+      });
+
+      await createProduct({
+        name: formData.name.trim(),
+        slug: formData.slug.trim() || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        categoryId: formData.categoryId,
+        categoryName: formData.categoryName,
+        brand: formData.brand.trim(),
+        description: formData.description.trim(),
+        shortDescription: formData.shortDescription.trim(),
+        price: Number(formData.price) || 0,
+        mrp: Number(formData.mrp) || 0,
+        discount: Number(formData.discount) || 0,
+        currency: formData.currency,
+        sku: formData.sku.trim(),
+        images: formData.image.trim() ? [formData.image.trim()] : [],
+        thumbnail: formData.image.trim(),
+        specifications: specificationsMap,
+        features: [],
+        availability: formData.availability,
+        stockQuantity: Number(formData.stockQuantity) || 0,
+        condition: formData.condition,
+        warranty: formData.warranty.trim(),
+        isFeatured: formData.featured,
+        isActive: formData.isActive,
+      });
+
+      router.push("/admin/products");
+    } catch (err) {
+      console.error("Failed to save product in Firestore:", err);
+      alert("Error saving product to Firestore. Check permissions.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -85,7 +146,7 @@ export default function AdminNewProductPage() {
 
       <AdminPageHeader
         title="Create New Product"
-        subtitle="Add a new hardware solution or equipment to the catalog."
+        subtitle="Add a new hardware solution or equipment to Cloud Firestore."
       >
         <Link
           href="/admin/products"
@@ -99,191 +160,198 @@ export default function AdminNewProductPage() {
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Core Details Card */}
         <div className="surface-card p-6 md:p-8 rounded-3xl border border-outline-variant/30 space-y-6">
-          <h3 className="text-base font-extrabold text-on-surface font-manrope border-b border-outline-variant/20 pb-3">
-            General Information
+          <h3 className="text-base font-bold text-on-surface font-manrope">
+            1. Core Specifications &amp; Taxonomy
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Product Name *
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                Product Title / Model Name *
               </label>
               <input
                 type="text"
                 required
+                placeholder="e.g. Enterprise 48-Port PoE+ Managed Switch"
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="e.g. Cisco Catalyst 48-Port Switch"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Slug (URL Identifier) *
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                URL Slug *
               </label>
               <input
                 type="text"
                 required
+                placeholder="e.g. enterprise-48-port-poe-managed-switch"
                 value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="cisco-catalyst-48-port-switch"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
                 Category *
               </label>
               <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-medium"
+                value={formData.categoryId}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               >
-                {defaultCategories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
+                {categoriesList.map((cat) => (
+                  <option key={cat.categoryId} value={cat.categoryId}>
+                    {cat.name} ({cat.categoryId})
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Brand / Manufacturer *
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                OEM / Brand Manufacturer
               </label>
               <input
                 type="text"
-                required
+                placeholder="e.g. Cisco / Ubiquiti / Hikvision"
                 value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                placeholder="e.g. Cisco / Hikvision / Dell"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => setFormData((prev) => ({ ...prev, brand: e.target.value }))}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Price Display
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                SKU / Part Number
               </label>
               <input
                 type="text"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="Custom Quote or ₹12,500"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                placeholder="e.g. NET-SW-48POE"
+                value={formData.sku}
+                onChange={(e) => setFormData((prev) => ({ ...prev, sku: e.target.value }))}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-mono"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Highlight Badge (Optional)
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                Stock Quantity &amp; Availability
               </label>
-              <input
-                type="text"
-                value={formData.badge}
-                onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
-                placeholder="e.g. Enterprise Standard / Best Seller"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Stock"
+                  value={formData.stockQuantity}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, stockQuantity: Number(e.target.value) }))}
+                  className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <select
+                  value={formData.availability}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, availability: e.target.value as any }))}
+                  className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="in_stock">In Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="on_order">On Order</option>
+                </select>
+              </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-              Image URL *
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+              Image URL
             </label>
             <input
               type="url"
-              required
+              placeholder="https://images.example.com/product.jpg"
               value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              placeholder="https://images.unsplash.com/... or cloud storage URL"
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              onChange={(e) => setFormData((prev) => ({ ...prev, image: e.target.value }))}
+              className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-              Description *
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+              Full Product Description
             </label>
             <textarea
-              required
               rows={4}
+              placeholder="Detailed architecture description, features, ports, capacity..."
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed technical overview and operational scope..."
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-4 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-3 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
-          {/* Flags */}
-          <div className="flex flex-wrap items-center gap-6 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-on-surface">
-              <input
-                type="checkbox"
-                checked={formData.inStock}
-                onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary"
-              />
-              <span>In Stock &amp; Available</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-on-surface">
+          <div className="flex items-center gap-6 pt-2">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.featured}
-                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
-                className="w-4 h-4 rounded text-primary focus:ring-primary"
+                onChange={(e) => setFormData((prev) => ({ ...prev, featured: e.target.checked }))}
+                className="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/40"
               />
-              <span>Feature on Public Homepage</span>
+              <span className="text-xs font-bold text-on-surface font-manrope">
+                Mark as Featured Product
+              </span>
+            </label>
+
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                className="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/40"
+              />
+              <span className="text-xs font-bold text-on-surface font-manrope">
+                Active in Catalog
+              </span>
             </label>
           </div>
         </div>
 
-        {/* Technical Specifications */}
-        <div className="surface-card p-6 md:p-8 rounded-3xl border border-outline-variant/30 space-y-4">
-          <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
-            <div>
-              <h3 className="text-base font-extrabold text-on-surface font-manrope">
-                Technical Specifications
-              </h3>
-              <p className="text-xs text-on-surface-variant">
-                Key-value parameters displayed in product datasheets
-              </p>
-            </div>
+        {/* Technical Specs Key-Value */}
+        <div className="surface-card p-6 md:p-8 rounded-3xl border border-outline-variant/30 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-on-surface font-manrope">
+              2. Technical Specifications (Key-Value)
+            </h3>
             <button
               type="button"
               onClick={handleAddSpec}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/40 hover:bg-surface-container text-xs font-bold text-primary font-manrope"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-outline-variant/40 bg-surface-container text-xs font-bold font-manrope text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Spec</span>
+              <Plus className="w-3.5 h-3.5 text-primary" />
+              <span>Add Spec Row</span>
             </button>
           </div>
 
           <div className="space-y-3">
-            {specs.map((spec, idx) => (
-              <div key={idx} className="flex items-center gap-3">
+            {specs.map((spec, index) => (
+              <div key={index} className="flex items-center gap-3">
                 <input
                   type="text"
-                  placeholder="Spec Label (e.g. Ports)"
+                  placeholder="Key (e.g. Ports, Throughput, Memory)"
                   value={spec.key}
-                  onChange={(e) => handleSpecChange(idx, "key", e.target.value)}
-                  className="w-1/3 bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2 text-xs text-on-surface font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                  onChange={(e) => handleSpecChange(index, "key", e.target.value)}
+                  className="w-1/3 bg-white border border-outline-variant/40 rounded-xl px-4 py-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-mono"
                 />
                 <input
                   type="text"
-                  placeholder="Value (e.g. 48x GbE PoE+)"
+                  placeholder="Value (e.g. 48x GbE PoE+ 370W, 176 Gbps)"
                   value={spec.value}
-                  onChange={(e) => handleSpecChange(idx, "value", e.target.value)}
-                  className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                  onChange={(e) => handleSpecChange(index, "value", e.target.value)}
+                  className="flex-1 bg-white border border-outline-variant/40 rounded-xl px-4 py-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 <button
                   type="button"
-                  onClick={() => handleRemoveSpec(idx)}
-                  className="p-2 text-on-surface-variant hover:text-error hover:bg-red-50 rounded-lg transition-colors"
+                  onClick={() => handleRemoveSpec(index)}
+                  className="p-2 rounded-xl text-on-surface-variant hover:text-error hover:bg-red-50 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -293,27 +361,27 @@ export default function AdminNewProductPage() {
         </div>
 
         {/* Submit Actions */}
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-3 pt-4">
           <Link
             href="/admin/products"
-            className="px-5 py-2.5 rounded-xl border border-outline-variant/40 text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-colors"
+            className="px-6 py-2.5 border border-outline-variant/40 text-xs font-bold rounded-xl hover:bg-surface-container font-manrope"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-6 py-2.5 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary/90 transition-all font-manrope flex items-center gap-2 shadow-md disabled:opacity-50"
+            className="px-6 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 font-manrope shadow-md flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving Product...</span>
+                <span>Saving to Firestore...</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Save Product</span>
+                <span>Save Product to Catalog</span>
               </>
             )}
           </button>

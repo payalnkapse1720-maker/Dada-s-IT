@@ -7,43 +7,94 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isValidEmail(email) {
+      return email is string && email.matches('^[^@]+@[^@]+\\.[^@]+$');
+    }
+
     function isValidEnquiry() {
       let data = request.resource.data;
-      return data.firstName is string && data.firstName.size() >= 2 && data.firstName.size() <= 100
-          && data.lastName is string && data.lastName.size() >= 2 && data.lastName.size() <= 100
-          && data.email is string && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
-          && data.inquiryType in ['technical', 'sales', 'partnership', 'amc']
-          && data.message is string && data.message.size() >= 10 && data.message.size() <= 5000
-          && data.status == 'new';
+      return (
+        // Must contain email and message
+        isValidEmail(data.email) &&
+        data.message is string && data.message.size() >= 5 && data.message.size() <= 5000 &&
+        // Name check (either name or firstName)
+        ((data.name is string && data.name.size() >= 2) || (data.firstName is string && data.firstName.size() >= 2)) &&
+        // Status check
+        (data.status == 'new' || data.status == 'pending')
+      );
     }
 
     function isValidQuote() {
       let data = request.resource.data;
-      return data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100
-          && data.email is string && data.email.matches('^[^@]+@[^@]+\\.[^@]+$')
-          && data.phone is string && data.phone.size() >= 8 && data.phone.size() <= 20
-          && data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 200
-          && data.quantity is number && data.quantity >= 1
-          && data.status == 'new';
+      return (
+        // Must contain email and product info
+        isValidEmail(data.email) &&
+        ((data.name is string && data.name.size() >= 2) || (data.fullName is string && data.fullName.size() >= 2)) &&
+        data.productName is string && data.productName.size() >= 1 &&
+        data.quantity is number && data.quantity >= 1 &&
+        (data.status == 'new' || data.status == 'pending')
+      );
     }
 
-    // Enquiries Collection:
-    // - Public can create with valid schema
-    // - Only authenticated administrators can read, update status, and delete
+    // 1. Admins Collection:
+    // Strictly restricted to authenticated Firebase admin users
+    // Passwords must never be stored in Firestore documents
+    match /admins/{adminId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 2. Categories Collection:
+    // Public visitors can read active categories; Admins have full access
+    match /categories/{categoryId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 3. Products Collection:
+    // Public visitors can read active products; Admins have full access
+    match /products/{productId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 4. Services Collection:
+    // Public visitors can read active services; Admins have full access
+    match /services/{serviceId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 5. Projects Collection:
+    // Public visitors can read active projects; Admins have full access
+    match /projects/{projectId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 6. Enquiries Collection:
+    // Public can submit consultation / product inquiries with valid schema
+    // Only authenticated administrators can view, manage, and delete
     match /enquiries/{enquiryId} {
       allow create: if isValidEnquiry();
       allow read, update, delete: if isAuthenticated();
     }
 
-    // Quotes Collection:
-    // - Public can create with valid schema
-    // - Only authenticated administrators can read, update status, and delete
+    // 7. Quotes Collection:
+    // Public can request quotation with valid schema
+    // Only authenticated administrators can view, manage, and delete
     match /quotes/{quoteId} {
       allow create: if isValidQuote();
       allow read, update, delete: if isAuthenticated();
     }
 
-    // Default: Deny access to any other collections
+    // 8. Website Content Collection:
+    // Public read for homepage, about, and contact sections; authenticated edit only
+    match /websiteContent/{sectionId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Default Fallback: Deny access to any unlisted collections
     match /{document=**} {
       allow read, write: if false;
     }

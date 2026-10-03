@@ -17,67 +17,54 @@ import {
   Inbox,
   User,
   Calendar,
+  Layers,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminStatCard from "@/components/admin/AdminStatCard";
 import { subscribeEnquiries } from "@/lib/firebase/enquiries";
 import { subscribeQuotes } from "@/lib/firebase/quotes";
-import { EnquiryRecord, QuoteRecord } from "@/types";
+import { subscribeProducts } from "@/lib/firebase/products";
+import { subscribeServices } from "@/lib/firebase/services";
+import { subscribeProjects } from "@/lib/firebase/projects";
+import { subscribeCategories } from "@/lib/firebase/categories";
+import { EnquiryDoc, QuoteDoc, ProductDoc, ServiceDoc, ProjectDoc, CategoryDoc } from "@/types";
 import { formatFirestoreDate } from "@/lib/utils";
 
 export default function AdminDashboardPage() {
-  const [enquiries, setEnquiries] = useState<EnquiryRecord[]>([]);
-  const [quotes, setQuotes] = useState<QuoteRecord[]>([]);
+  const [enquiries, setEnquiries] = useState<EnquiryDoc[]>([]);
+  const [quotes, setQuotes] = useState<QuoteDoc[]>([]);
+  const [products, setProducts] = useState<ProductDoc[]>([]);
+  const [services, setServices] = useState<ServiceDoc[]>([]);
+  const [projects, setProjects] = useState<ProjectDoc[]>([]);
+  const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let loadedEnquiries = false;
-    let loadedQuotes = false;
+    let unsubs: (() => void)[] = [];
 
-    const checkLoading = () => {
-      if (loadedEnquiries && loadedQuotes) {
-        setIsLoading(false);
-      }
-    };
+    const unsubEnq = subscribeEnquiries((data) => setEnquiries(data));
+    const unsubQuot = subscribeQuotes((data) => setQuotes(data));
+    const unsubProd = subscribeProducts((data) => setProducts(data));
+    const unsubServ = subscribeServices((data) => setServices(data));
+    const unsubProj = subscribeProjects((data) => setProjects(data));
+    const unsubCat = subscribeCategories((data) => setCategories(data));
 
-    const unsubEnquiries = subscribeEnquiries(
-      (data) => {
-        setEnquiries(data);
-        loadedEnquiries = true;
-        checkLoading();
-      },
-      () => {
-        loadedEnquiries = true;
-        checkLoading();
-      }
-    );
-
-    const unsubQuotes = subscribeQuotes(
-      (data) => {
-        setQuotes(data);
-        loadedQuotes = true;
-        checkLoading();
-      },
-      () => {
-        loadedQuotes = true;
-        checkLoading();
-      }
-    );
+    unsubs = [unsubEnq, unsubQuot, unsubProd, unsubServ, unsubProj, unsubCat];
+    setIsLoading(false);
 
     return () => {
-      unsubEnquiries();
-      unsubQuotes();
+      unsubs.forEach((u) => u());
     };
   }, []);
 
   const newEnquiriesCount = enquiries.filter((e) => e.status === "new").length;
-  const pendingQuotesCount = quotes.filter((q) => q.status === "new").length;
+  const pendingQuotesCount = quotes.filter((q) => q.status === "new" || q.status === "pending").length;
 
   const statCards = [
     {
       title: "Total Products",
-      value: 0,
-      description: "0 Active catalog items in Firestore",
+      value: products.length,
+      description: `${products.length} Active catalog items in Firestore`,
       icon: Package,
       badge: "Catalog",
       badgeType: "info" as const,
@@ -85,8 +72,8 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Total Services",
-      value: 0,
-      description: "0 Service packages in Firestore",
+      value: services.length,
+      description: `${services.length} Service packages in Firestore`,
       icon: Wrench,
       badge: "Business",
       badgeType: "default" as const,
@@ -94,8 +81,8 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Total Projects",
-      value: 0,
-      description: "0 Deployed case studies",
+      value: projects.length,
+      description: `${projects.length} Deployed case studies`,
       icon: FolderGit2,
       badge: "Portfolio",
       badgeType: "default" as const,
@@ -120,44 +107,44 @@ export default function AdminDashboardPage() {
       href: "/admin/quotes",
     },
     {
-      title: "Blog / Insights",
-      value: 0,
-      description: "0 Published technical articles",
-      icon: BookOpen,
-      badge: "Content",
+      title: "Categories",
+      value: categories.length,
+      description: `${categories.length} Catalog taxonomies`,
+      icon: Layers,
+      badge: "Structure",
       badgeType: "default" as const,
-      href: "/admin/blog",
+      href: "/admin/categories",
     },
   ];
 
   // Combine and sort recent leads from both enquiries and quotes
   const combinedRecent = [
     ...enquiries.map((e) => ({
-      id: e.id,
+      id: e.enquiryId || e.id || "enq",
       type: "enquiry" as const,
-      title: `${e.firstName} ${e.lastName}`,
-      subtitle: `${e.inquiryType.toUpperCase()} — ${e.email}`,
+      title: e.name || `${e.firstName || ""} ${e.lastName || ""}`.trim() || "Visitor",
+      subtitle: `${(e.type || e.inquiryType || "General").toUpperCase()} — ${e.email}`,
       date: e.createdAt,
       status: e.status,
       href: "/admin/enquiries",
     })),
     ...quotes.map((q) => ({
-      id: q.id,
+      id: q.quoteId || q.id || "quote",
       type: "quote" as const,
-      title: q.fullName,
-      subtitle: `${q.productName} (${q.quantity} units)`,
+      title: q.name || q.fullName || "Customer",
+      subtitle: `${q.productName || "Product"} (${q.quantity || 1} units)`,
       date: q.createdAt,
       status: q.status,
       href: "/admin/quotes",
     })),
-  ].slice(0, 5);
+  ].slice(0, 6);
 
   return (
     <div className="space-y-8">
       {/* Page Header with Quick Actions */}
       <AdminPageHeader
         title="Control Center Overview"
-        subtitle="Real-time operational dashboard and enterprise lead management."
+        subtitle="Real-time operational dashboard and enterprise lead management powered by Cloud Firestore."
       >
         <Link
           href="/admin/products/new"
@@ -248,13 +235,6 @@ export default function AdminDashboardPage() {
                     <span className="uppercase text-[9px] font-bold px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30">
                       {item.status}
                     </span>
-                    <Link
-                      href={item.href}
-                      className="p-1 rounded-lg border border-outline-variant/30 text-on-surface-variant hover:text-primary transition-colors"
-                      title="View record"
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </Link>
                   </div>
                 </div>
               ))}
@@ -262,44 +242,59 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* System & Architecture Summary */}
-        <div className="lg:col-span-4 surface-card p-6 rounded-3xl border border-outline-variant/30 space-y-4 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 pb-4 border-b border-outline-variant/20">
-              <ShieldAlert className="w-4 h-4 text-primary" />
-              <h3 className="font-extrabold text-base text-on-surface font-manrope">
-                System Integration
-              </h3>
+        {/* Database & Cloud Architecture Status */}
+        <div className="lg:col-span-4 surface-card p-6 rounded-3xl border border-outline-variant/30 space-y-4">
+          <div className="pb-3 border-b border-outline-variant/20">
+            <h3 className="font-extrabold text-base text-on-surface font-manrope">
+              Firestore Status
+            </h3>
+            <p className="text-xs text-on-surface-variant">
+              8 Collections Architecture
+            </p>
+          </div>
+
+          <div className="space-y-2.5 text-xs">
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">admins</span>
+              <span className="font-bold text-emerald-700">Protected</span>
             </div>
-            <div className="mt-4 space-y-3.5 text-xs">
-              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                <span className="font-semibold text-on-surface">Firebase Auth</span>
-                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Active
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                <span className="font-semibold text-on-surface">Firestore DB</span>
-                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Connected &amp; Syncing
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container-low border border-outline-variant/30">
-                <span className="font-semibold text-on-surface">Public Website</span>
-                <span className="font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                  Live Firestore Writes
-                </span>
-              </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">categories</span>
+              <span className="font-bold text-on-surface">{categories.length} Taxonomies</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">products</span>
+              <span className="font-bold text-on-surface">{products.length} Items</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">services</span>
+              <span className="font-bold text-on-surface">{services.length} Packages</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">projects</span>
+              <span className="font-bold text-on-surface">{projects.length} Case Studies</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">enquiries</span>
+              <span className="font-bold text-primary">{enquiries.length} Inquiries</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5 border-b border-outline-variant/10">
+              <span className="text-on-surface-variant font-mono">quotes</span>
+              <span className="font-bold text-emerald-700">{quotes.length} Requests</span>
+            </div>
+            <div className="flex items-center justify-between py-1.5">
+              <span className="text-on-surface-variant font-mono">websiteContent</span>
+              <span className="font-bold text-on-surface">3 Sections</span>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-outline-variant/20">
+          <div className="pt-2">
             <Link
               href="/admin/settings"
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-outline-variant/40 hover:bg-surface-container text-xs font-bold font-manrope text-on-surface transition-colors cursor-pointer"
+              className="w-full py-2 px-3 bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors font-manrope"
             >
-              <span>View System Settings</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <Layers className="w-3.5 h-3.5" />
+              <span>Database Settings</span>
             </Link>
           </div>
         </div>

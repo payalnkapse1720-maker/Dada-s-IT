@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, Plus, Trash2, Loader2 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs";
+import AdminLoadingState from "@/components/admin/AdminLoadingState";
+import { getServiceById, updateService } from "@/lib/firebase/services";
 
 export default function AdminEditServicePage({
   params,
@@ -14,44 +16,72 @@ export default function AdminEditServicePage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    title: "Enterprise IT Infrastructure & Networking",
+    name: "",
     slug: id,
-    category: "infrastructure",
-    shortDescription: "End-to-end network design, structural cabling, and server installations.",
-    fullDescription: "Future-proof your enterprise infrastructure with high-performance, secure networking.",
-    icon: "Router",
-    sla: "99.99% Uptime Guarantee with 15-min Dispatch",
-    image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&q=80&w=800",
+    description: "",
+    icon: "laptop",
+    image: "",
+    order: 1,
+    isActive: true,
   });
 
-  const [features, setFeatures] = useState<string[]>([
-    "Structured Cabling (Cat6, Cat6A, 10G/40G Fiber Optic Backbone)",
-    "Core & Edge Switch Deployment (Cisco, Ubiquiti, Aruba, D-Link)",
-    "High-Throughput LAN/WAN & Multi-Site VPN Interconnects",
-  ]);
+  useEffect(() => {
+    async function loadService() {
+      try {
+        const srv = await getServiceById(id);
+        if (srv) {
+          setFormData({
+            name: srv.name || "",
+            slug: srv.slug || id,
+            description: srv.description || "",
+            icon: srv.icon || "laptop",
+            image: srv.image || "",
+            order: srv.order || 1,
+            isActive: srv.isActive ?? true,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load service from Firestore:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-  const handleAddFeature = () => {
-    setFeatures((prev) => [...prev, ""]);
-  };
-
-  const handleFeatureChange = (index: number, val: string) => {
-    setFeatures((prev) => prev.map((f, i) => (i === index ? val : f)));
-  };
-
-  const handleRemoveFeature = (index: number) => {
-    setFeatures((prev) => prev.filter((_, i) => i !== index));
-  };
+    loadService();
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.name.trim()) return;
+
     setIsSubmitting(true);
-    await new Promise((res) => setTimeout(res, 600));
-    setIsSubmitting(false);
-    router.push("/admin/services");
+    try {
+      await updateService(id, {
+        name: formData.name.trim(),
+        slug: formData.slug.trim(),
+        description: formData.description.trim(),
+        icon: formData.icon.trim() || "laptop",
+        image: formData.image.trim(),
+        order: Number(formData.order) || 1,
+        isActive: formData.isActive,
+      });
+
+      router.push("/admin/services");
+    } catch (err) {
+      console.error("Failed to update service in Firestore:", err);
+      alert("Error updating service in Firestore. Check permissions.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return <AdminLoadingState message="Fetching service package from Cloud Firestore..." />;
+  }
 
   return (
     <div className="space-y-6">
@@ -65,7 +95,7 @@ export default function AdminEditServicePage({
 
       <AdminPageHeader
         title="Edit Service Package"
-        subtitle={`Editing service package ID: ${id}`}
+        subtitle={`Editing service document ID: ${id}`}
       >
         <Link
           href="/admin/services"
@@ -85,44 +115,28 @@ export default function AdminEditServicePage({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Service Title *
+                Service Name *
               </label>
               <input
                 type="text"
                 required
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Slug (URL Identifier) *
+                Slug *
               </label>
               <input
                 type="text"
                 required
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-mono"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Category *
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-medium"
-              >
-                <option value="infrastructure">Infrastructure &amp; Networking</option>
-                <option value="security">Security &amp; Surveillance</option>
-                <option value="management">Managed IT &amp; Facility AMC</option>
-                <option value="digital">Cloud &amp; Digital Solutions</option>
-              </select>
             </div>
 
             <div>
@@ -133,122 +147,85 @@ export default function AdminEditServicePage({
                 type="text"
                 value={formData.icon}
                 onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                SLA Guarantee Statement
-              </label>
-              <input
-                type="text"
-                value={formData.sla}
-                onChange={(e) => setFormData({ ...formData, sla: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-                Image / Hero Banner URL
-              </label>
-              <input
-                type="url"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-              Short Description *
-            </label>
-            <textarea
-              required
-              rows={2}
-              value={formData.shortDescription}
-              onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
-              Full Scope &amp; Deliverables *
-            </label>
-            <textarea
-              required
-              rows={4}
-              value={formData.fullDescription}
-              onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl p-3 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-        </div>
-
-        {/* Feature List */}
-        <div className="surface-card p-6 md:p-8 rounded-3xl border border-outline-variant/30 space-y-4">
-          <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
             <div>
-              <h3 className="text-base font-extrabold text-on-surface font-manrope">
-                Key Features &amp; Deliverables
-              </h3>
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
+                Display Order Priority (Integer)
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.order}
+                onChange={(e) => setFormData({ ...formData, order: Number(e.target.value) })}
+                className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-mono"
+              />
             </div>
-            <button
-              type="button"
-              onClick={handleAddFeature}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant/40 hover:bg-surface-container text-xs font-bold text-primary font-manrope cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Feature</span>
-            </button>
           </div>
 
-          <div className="space-y-3">
-            {features.map((feat, idx) => (
-              <div key={idx} className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={feat}
-                  onChange={(e) => handleFeatureChange(idx, e.target.value)}
-                  className="flex-1 bg-surface-container-low border border-outline-variant/40 rounded-xl px-4 py-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveFeature(idx)}
-                  className="p-2 text-on-surface-variant hover:text-error hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
+              Cover Image URL
+            </label>
+            <input
+              type="url"
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
+              Full Service Description
+            </label>
+            <textarea
+              rows={4}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full bg-white border border-outline-variant/40 rounded-xl px-4 py-2.5 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div className="pt-2">
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant/40"
+              />
+              <span className="text-xs font-bold text-on-surface font-manrope">
+                Active in Services Catalog
+              </span>
+            </label>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-3">
+        {/* Submit Actions */}
+        <div className="flex items-center justify-end gap-3 pt-4">
           <Link
             href="/admin/services"
-            className="px-5 py-2.5 rounded-xl border border-outline-variant/40 text-xs font-bold text-on-surface-variant hover:bg-surface-container transition-colors"
+            className="px-6 py-2.5 border border-outline-variant/40 text-xs font-bold rounded-xl hover:bg-surface-container font-manrope"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-6 py-2.5 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary/90 transition-all font-manrope flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
+            className="px-6 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 font-manrope shadow-md flex items-center gap-2 cursor-pointer"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Updating Service...</span>
+                <span>Updating in Firestore...</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Update Service</span>
+                <span>Update Service Package</span>
               </>
             )}
           </button>
