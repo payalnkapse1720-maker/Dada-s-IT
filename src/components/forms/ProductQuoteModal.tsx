@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productQuoteSchema } from "@/lib/validations";
 import { ProductQuoteFormData, Product } from "@/types";
-import { X, CheckCircle2, Send, Loader2, PackageCheck } from "lucide-react";
+import { createQuote } from "@/lib/firebase/quotes";
+import { X, CheckCircle2, Send, Loader2, PackageCheck, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ProductQuoteModalProps {
@@ -21,28 +22,69 @@ export default function ProductQuoteModal({
 }: ProductQuoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    setValue,
+    formState: { errors, isSubmitting: isFormSubmitting },
   } = useForm<ProductQuoteFormData>({
     resolver: zodResolver(productQuoteSchema),
-    defaultValues: {
-      productName: product ? product.name : "",
-      quantity: 1,
-    },
+    values: product
+      ? {
+          fullName: "",
+          email: "",
+          phone: "",
+          companyName: "",
+          productName: product.name,
+          quantity: 1,
+          notes: "",
+        }
+      : undefined,
   });
+
+  // Reset errors when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setSubmitError(null);
+      setIsSuccess(false);
+    }
+  }, [isOpen, product]);
 
   const onSubmit = async (data: ProductQuoteFormData) => {
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Product Quote Submitted:", data);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    reset();
+    setSubmitError(null);
+    try {
+      const submissionData: ProductQuoteFormData = {
+        fullName: data.fullName.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim(),
+        companyName: data.companyName?.trim() || "",
+        productName: data.productName?.trim() || product?.name || "Product Inquiry",
+        quantity: Number(data.quantity) || 1,
+        notes: data.notes?.trim() || "",
+      };
+
+      await createQuote(submissionData);
+      setIsSuccess(true);
+      reset();
+    } catch (err: any) {
+      console.error("Failed to submit quotation request:", err);
+      setSubmitError(
+        err?.message ||
+          "Failed to send quotation request. Please check your internet connection and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const onFormError = (formErrors: any) => {
+    console.warn("Validation errors in Quote Modal:", formErrors);
+  };
+
 
   if (!isOpen || !product) return null;
 
@@ -97,7 +139,14 @@ export default function ProductQuoteModal({
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit, onFormError)} className="space-y-4">
+              {submitError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-error/20 text-error text-xs flex items-center gap-2 font-medium">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+
               <input type="hidden" value={product.name} {...register("productName")} />
 
               <div>
@@ -109,9 +158,12 @@ export default function ProductQuoteModal({
                   placeholder="Your full name"
                   {...register("fullName")}
                   className={`w-full bg-surface-container-low border rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary ${
-                    errors.fullName ? "border-error" : "border-outline-variant/40"
+                    errors.fullName ? "border-error ring-1 ring-error" : "border-outline-variant/40"
                   }`}
                 />
+                {errors.fullName && (
+                  <p className="text-error text-xs mt-1 font-medium">{errors.fullName.message}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -124,9 +176,12 @@ export default function ProductQuoteModal({
                     placeholder="name@company.com"
                     {...register("email")}
                     className={`w-full bg-surface-container-low border rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary ${
-                      errors.email ? "border-error" : "border-outline-variant/40"
+                      errors.email ? "border-error ring-1 ring-error" : "border-outline-variant/40"
                     }`}
                   />
+                  {errors.email && (
+                    <p className="text-error text-xs mt-1 font-medium">{errors.email.message}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1 font-manrope">
@@ -137,9 +192,12 @@ export default function ProductQuoteModal({
                     placeholder="+91 98765 43210"
                     {...register("phone")}
                     className={`w-full bg-surface-container-low border rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary ${
-                      errors.phone ? "border-error" : "border-outline-variant/40"
+                      errors.phone ? "border-error ring-1 ring-error" : "border-outline-variant/40"
                     }`}
                   />
+                  {errors.phone && (
+                    <p className="text-error text-xs mt-1 font-medium">{errors.phone.message}</p>
+                  )}
                 </div>
               </div>
 

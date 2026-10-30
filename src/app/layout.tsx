@@ -23,7 +23,9 @@ export const metadata: Metadata = {
     "Server Sales and Services",
     "IT Facility Management",
     "Annual Maintenance Contract",
-    "AMC Services Pune Mumbai",
+    "AMC Services India",
+    "Pan-India IT Infrastructure",
+    "Enterprise CCTV Surveillance India",
     "IP Surveillance Systems",
     "Video Door Phones",
     "Web Development Solutions"

@@ -1,0 +1,102 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches('^[^@]+@[^@]+\\.[^@]+$');
+    }
+
+    function isValidEnquiry() {
+      let data = request.resource.data;
+      return (
+        // Must contain email and message
+        isValidEmail(data.email) &&
+        data.message is string && data.message.size() >= 5 && data.message.size() <= 5000 &&
+        // Name check (either name or firstName)
+        ((data.name is string && data.name.size() >= 2) || (data.firstName is string && data.firstName.size() >= 2)) &&
+        // Status check
+        (data.status == 'new' || data.status == 'pending')
+      );
+    }
+
+    function isValidQuote() {
+      let data = request.resource.data;
+      return (
+        // Must contain email and product info
+        isValidEmail(data.email) &&
+        ((data.name is string && data.name.size() >= 2) || (data.fullName is string && data.fullName.size() >= 2)) &&
+        data.productName is string && data.productName.size() >= 1 &&
+        data.quantity is number && data.quantity >= 1 &&
+        (data.status == 'new' || data.status == 'pending')
+      );
+    }
+
+    // 1. Admins Collection:
+    // Strictly restricted to authenticated Firebase admin users
+    // Passwords must never be stored in Firestore documents
+    match /admins/{adminId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // 2. Categories Collection:
+    // Public visitors can read active categories; Admins have full access
+    match /categories/{categoryId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 3. Products Collection:
+    // Public visitors can read active products; Admins have full access
+    match /products/{productId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 4. Services Collection:
+    // Public visitors can read active services; Admins have full access
+    match /services/{serviceId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 5. Projects Collection:
+    // Public visitors can read active projects; Admins have full access
+    match /projects/{projectId} {
+      allow read: if resource == null || resource.data.isActive == true || isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // 6. Enquiries Collection:
+    // Public can submit consultation / product inquiries with valid schema
+    // Only authenticated administrators can view, manage, and delete
+    match /enquiries/{enquiryId} {
+      allow create: if isValidEnquiry();
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // 7. Quotes Collection:
+    // Public can request quotation with valid schema
+    // Only authenticated administrators can view, manage, and delete
+    match /quotes/{quoteId} {
+      allow create: if isValidQuote();
+      allow read, update, delete: if isAuthenticated();
+    }
+
+    // 8. Website Content Collection:
+    // Public read for homepage, about, and contact sections; authenticated edit only
+    match /websiteContent/{sectionId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Default Fallback: Deny access to any unlisted collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

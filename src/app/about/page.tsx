@@ -6,6 +6,7 @@ import { Shield, Award, Users, Target, Compass, Sparkles, CheckCircle2, ArrowRig
 import { timelineData } from "@/data/timeline";
 import StatsSection from "@/components/sections/StatsSection";
 import CTASection from "@/components/sections/CTASection";
+import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 
 export const metadata: Metadata = {
   title: "About Our Legacy | DADA'S I.T Services & Security Solutions",
@@ -16,8 +17,17 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div className="pt-24 pb-16 bg-background">
+      {/* Breadcrumb Navigation */}
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 pt-6">
+        <PageBreadcrumb
+          items={[{ label: "About Us" }]}
+          backLabel="Back to Home"
+          backHref="/"
+        />
+      </div>
+
       {/* Hero Header */}
-      <section className="py-16 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider mb-4 font-manrope">
           <Shield className="w-3.5 h-3.5" />
           <span>Our Legacy &amp; Ethos</span>

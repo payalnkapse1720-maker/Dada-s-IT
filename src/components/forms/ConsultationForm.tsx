@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { inquiryFormSchema } from "@/lib/validations";
 import { InquiryFormData } from "@/types";
+import { createEnquiry } from "@/lib/firebase/enquiries";
 import { AlertCircle, CheckCircle2, Send, Loader2, ShieldAlert } from "lucide-react";
 
 interface ConsultationFormProps {
@@ -14,6 +15,7 @@ interface ConsultationFormProps {
 export default function ConsultationForm({ defaultService }: ConsultationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -30,13 +32,21 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
 
   const onSubmit = async (data: InquiryFormData) => {
     setIsSubmitting(true);
-    // Simulate API submission
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    console.log("Form Submitted:", data);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    reset();
+    setSubmitError(null);
+    try {
+      await createEnquiry(data);
+      setIsSuccess(true);
+      reset();
+    } catch (err: any) {
+      console.error("Failed to submit consultation inquiry:", err);
+      setSubmitError(
+        "Something went wrong while transmitting your inquiry. Please try again or reach out to us directly."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
 
   return (
     <div className="surface-card p-6 md:p-10 relative overflow-hidden">
@@ -75,6 +85,13 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {submitError && (
+            <div className="p-4 rounded-xl bg-red-50 border border-error/20 text-error text-xs flex items-center gap-2.5 font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">

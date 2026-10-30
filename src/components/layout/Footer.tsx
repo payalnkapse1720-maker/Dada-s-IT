@@ -36,7 +36,7 @@ export default function Footer() {
             <div className="space-y-2 pt-2 text-sm text-surface-variant">
               <div className="flex items-center gap-3">
                 <MapPin className="w-4 h-4 text-primary-container shrink-0" />
-                <span>Pune &amp; Mumbai, Maharashtra, India</span>
+                <span>Headquartered in Maharashtra | Serving Clients Across All Over India</span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-primary-container shrink-0" />

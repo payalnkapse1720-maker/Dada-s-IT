@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { Router, ShieldCheck, Zap, Activity, CheckCircle2, ArrowRight, Shield, Layers } from "lucide-react";
 import { servicesData } from "@/data/services";
 import ConsultationForm from "@/components/forms/ConsultationForm";
+import PageBreadcrumb from "@/components/ui/PageBreadcrumb";
 
 export const metadata: Metadata = {
   title: "Enterprise Networking & Structured Cabling | DADA'S I.T",
@@ -17,8 +18,20 @@ export default function ITInfrastructurePage() {
 
   return (
     <div className="pt-24 pb-16 bg-background">
+      {/* Breadcrumb Navigation */}
+      <div className="max-w-[1440px] mx-auto px-6 md:px-12 lg:px-16 pt-6">
+        <PageBreadcrumb
+          items={[
+            { label: "Services", href: "/services" },
+            { label: "IT Infrastructure & Networking" },
+          ]}
+          backLabel="Back to Services"
+          backHref="/services"
+        />
+      </div>
+
       {/* Header */}
-      <section className="py-16 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider font-manrope">
