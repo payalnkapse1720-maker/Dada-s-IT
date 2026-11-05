@@ -5,8 +5,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { productQuoteSchema } from "@/lib/validations";
 import { ProductQuoteFormData, Product } from "@/types";
-import { X, CheckCircle2, Send, Loader2, PackageCheck } from "lucide-react";
+import { X, CheckCircle2, Send, Loader2, PackageCheck, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { submitProductQuote } from "@/lib/firebase";
 
 interface ProductQuoteModalProps {
   product: Product | null;
@@ -21,6 +22,8 @@ export default function ProductQuoteModal({
 }: ProductQuoteModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hpValue, setHpValue] = useState("");
 
   const {
     register,
@@ -36,12 +39,37 @@ export default function ProductQuoteModal({
   });
 
   const onSubmit = async (data: ProductQuoteFormData) => {
+    if (isSubmitting) return;
+
+    // Honeypot check: If bot filled the hidden honeypot, silently drop without writing to Firestore
+    if (hpValue.trim()) {
+      setIsSuccess(true);
+      reset();
+      setHpValue("");
+      return;
+    }
+
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Product Quote Submitted:", data);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    reset();
+    setErrorMessage(null);
+
+    try {
+      await submitProductQuote(data);
+      setIsSuccess(true);
+      reset();
+    } catch {
+      setErrorMessage(
+        "Unable to transmit quotation request. Please check your network connection and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsSuccess(false);
+    setErrorMessage(null);
+    setHpValue("");
+    onClose();
   };
 
   if (!isOpen || !product) return null;
@@ -57,7 +85,7 @@ export default function ProductQuoteModal({
         >
           {/* Close button */}
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="absolute top-6 right-6 p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
           >
             <X className="w-5 h-5" />
@@ -87,10 +115,7 @@ export default function ProductQuoteModal({
                 Our procurement team will send you the official price quote and bulk discount sheet to your email.
               </p>
               <button
-                onClick={() => {
-                  setIsSuccess(false);
-                  onClose();
-                }}
+                onClick={handleModalClose}
                 className="mt-4 px-6 py-2 bg-primary text-white rounded-full text-xs font-bold"
               >
                 Close Window
@@ -98,6 +123,20 @@ export default function ProductQuoteModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Honeypot field for anti-bot protection */}
+              <div className="opacity-0 absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+                <label htmlFor="quote_contact_url">Leave this field blank</label>
+                <input
+                  id="quote_contact_url"
+                  type="text"
+                  name="quote_contact_url"
+                  value={hpValue}
+                  onChange={(e) => setHpValue(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                />
+              </div>
+
               <input type="hidden" value={product.name} {...register("productName")} />
 
               <div>
@@ -180,6 +219,13 @@ export default function ProductQuoteModal({
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
+
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-error/10 border border-error/30 text-error text-xs flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
               <button
                 type="submit"

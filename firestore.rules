@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function checking trusted Firebase Authentication identity
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Authorized administrator verification using trusted Firebase Auth token.
+    // Explicitly restricts administrative privileges to the two designated administrator accounts.
+    // Authenticated users whose email does not match are strictly denied administrative access.
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == 'payalnkapse1720@gmail.com' || 
+              request.auth.token.email == 'shravancyeole123@gmail.com');
+    }
+
+    // Helper: Validates customer consultation inquiry payloads (used by /inquiries and legacy /enquiries)
+    function isValidInquirySubmission(data) {
+      return data.keys().hasAll(['email', 'message', 'status', 'createdAt']) && 
+             (data.keys().hasAll(['name']) || 
+              data.keys().hasAll(['firstName', 'lastName'])) &&
+             data.keys().hasOnly(['name', 'fullName', 'firstName', 'lastName', 'email', 'phone', 'inquiryType', 'enquiryType', 'message', 'status', 'createdAt']) &&
+             data.email is string && data.email.size() <= 100 &&
+             data.message is string && data.message.size() >= 10 && data.message.size() <= 2500 &&
+             data.status == 'new' &&
+             data.createdAt is timestamp && data.createdAt == request.time &&
+             (!('inquiryType' in data) || data.inquiryType in ['technical', 'sales', 'partnership', 'amc']) &&
+             (!('enquiryType' in data) || data.enquiryType in ['technical', 'sales', 'partnership', 'amc']) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+             (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 100)) &&
+             (!('firstName' in data) || (data.firstName is string && data.firstName.size() <= 50)) &&
+             (!('lastName' in data) || (data.lastName is string && data.lastName.size() <= 50));
+    }
+
+    // Helper: Validates product quotation request payloads (used by /quotes)
+    function isValidQuoteSubmission(data) {
+      return data.keys().hasAll(['fullName', 'email', 'phone', 'productName', 'quantity', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['fullName', 'email', 'phone', 'companyName', 'productName', 'quantity', 'notes', 'status', 'createdAt']) &&
+             data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.productName is string && data.productName.size() <= 150 &&
+             data.quantity is number && data.quantity >= 1 && data.quantity <= 10000 &&
+             data.status == 'pending' &&
+             data.createdAt is timestamp && data.createdAt == request.time &&
+             (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 100)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    // Public catalog collections: readable by public visitors, editable ONLY by authorized admins
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /websiteContent/{contentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Customer quote requests:
+    // Public visitors can submit only valid quote requests matching the Phase 1 schema.
+    // Reading, updating, and deleting sensitive customer leads is restricted exclusively to authorized admins.
+    match /quotes/{quoteId} {
+      allow create: if isValidQuoteSubmission(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Customer consultation inquiries (primary collection used by Next.js application):
+    // Public visitors can submit only valid inquiries matching the Phase 1 schema.
+    // Reading, updating, and deleting sensitive customer leads is restricted exclusively to authorized admins.
+    match /inquiries/{inquiryId} {
+      allow create: if isValidInquirySubmission(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Legacy / Alternative customer enquiries collection:
+    // Reconciles legacy naming without breaking existing databases or schemas.
+    // Enforces the same strict validation and administrative lockdown.
+    match /enquiries/{enquiryId} {
+      allow create: if isValidInquirySubmission(request.resource.data);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Administrative metadata / configurations:
+    // Strictly restricted to authorized administrators. Public access is completely denied.
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Default deny for all other documents/collections/subcollections.
+    // Ensures no unlisted collections or paths can be accessed.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

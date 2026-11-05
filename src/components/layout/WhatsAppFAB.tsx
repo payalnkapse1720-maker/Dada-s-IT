@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { MessageSquare } from "lucide-react";
+import { businessInfo } from "@/data/business-info";
 
 export default function WhatsAppFAB() {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -9,7 +10,7 @@ export default function WhatsAppFAB() {
   return (
     <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50">
       <a
-        href="https://wa.me/919999999999?text=Hello%20DADA%27S%20I.T%20Team%2C%20I%20would%20like%20to%20inquire%20about%20your%20services"
+        href={`${businessInfo.whatsappLink}?text=Hello%20DADA%27S%20I.T%20Team%2C%20I%20would%20like%20to%20inquire%20about%20your%20services`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp Instant Support"

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { inquiryFormSchema } from "@/lib/validations";
 import { InquiryFormData } from "@/types";
 import { AlertCircle, CheckCircle2, Send, Loader2, ShieldAlert } from "lucide-react";
+import { submitInquiry } from "@/lib/firebase";
 
 interface ConsultationFormProps {
   defaultService?: string;
@@ -14,6 +15,8 @@ interface ConsultationFormProps {
 export default function ConsultationForm({ defaultService }: ConsultationFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hpValue, setHpValue] = useState("");
 
   const {
     register,
@@ -29,13 +32,30 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
   });
 
   const onSubmit = async (data: InquiryFormData) => {
+    if (isSubmitting) return;
+
+    // Honeypot check: If bot filled the hidden honeypot, silently drop without writing to Firestore
+    if (hpValue.trim()) {
+      setIsSuccess(true);
+      reset();
+      setHpValue("");
+      return;
+    }
+
     setIsSubmitting(true);
-    // Simulate API submission
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    console.log("Form Submitted:", data);
-    setIsSubmitting(false);
-    setIsSuccess(true);
-    reset();
+    setErrorMessage(null);
+
+    try {
+      await submitInquiry(data);
+      setIsSuccess(true);
+      reset();
+    } catch {
+      setErrorMessage(
+        "Unable to transmit your request right now. Please check your network connection and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -67,7 +87,10 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
             Thank you for reaching out to DADA&apos;S I.T Services &amp; Security Solutions. A senior solutions engineer has been assigned to your ticket.
           </p>
           <button
-            onClick={() => setIsSuccess(false)}
+            onClick={() => {
+              setIsSuccess(false);
+              setErrorMessage(null);
+            }}
             className="mt-4 px-6 py-2.5 bg-primary text-white rounded-full text-xs font-bold hover:bg-primary/90 transition-colors"
           >
             Submit Another Request
@@ -75,6 +98,20 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
         </div>
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          {/* Honeypot field for anti-bot protection - visually hidden, non-tabbable, accessible to screen readers as hidden */}
+          <div className="opacity-0 absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+            <label htmlFor="company_website_url">Leave this field blank</label>
+            <input
+              id="company_website_url"
+              type="text"
+              name="company_website_url"
+              value={hpValue}
+              onChange={(e) => setHpValue(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="firstName" className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5 font-manrope">
@@ -191,6 +228,13 @@ export default function ConsultationForm({ defaultService }: ConsultationFormPro
               </p>
             )}
           </div>
+
+          {errorMessage && (
+            <div className="p-3.5 rounded-xl bg-error/10 border border-error/30 text-error text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           <button
             type="submit"

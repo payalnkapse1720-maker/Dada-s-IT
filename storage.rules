@@ -1,0 +1,32 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper: Check if user is an authenticated administrator
+    function isAdmin() {
+      return request.auth != null && 
+             (request.auth.token.email == 'payalnkapse1720@gmail.com' || 
+              request.auth.token.email == 'shravancyeole123@gmail.com');
+    }
+
+    // Helper: Validate image uploads (images only, max 5MB)
+    function isValidImageUpload() {
+      return request.resource.size < 5 * 1024 * 1024 &&
+             request.resource.contentType.matches('image/.*');
+    }
+
+    // Catalog & media assets path (reserved for future CMS / product image uploads):
+    // Public visitors can view images; ONLY authorized admins can upload, update, or delete.
+    match /catalog/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidImageUpload();
+      allow delete: if isAdmin();
+    }
+
+    // Default deny for all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

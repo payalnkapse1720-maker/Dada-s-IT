@@ -1,6 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
 import { Shield } from "lucide-react";
+import { businessInfo } from "@/data/business-info";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | DADA'S I.T Services & Security Solutions",
@@ -50,8 +51,8 @@ export default function PrivacyPolicyPage() {
           </h2>
           <p>
             For privacy inquiries or data compliance audits, contact our compliance officer at{" "}
-            <a href="mailto:privacy@dadasit.com" className="text-primary font-bold hover:underline">
-              privacy@dadasit.com
+            <a href={businessInfo.emailLink} className="text-primary font-bold hover:underline">
+              {businessInfo.email}
             </a>.
           </p>
         </div>

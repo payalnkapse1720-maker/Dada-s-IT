@@ -2,9 +2,10 @@ import { MetadataRoute } from "next";
 import { servicesData } from "@/data/services";
 import { projectsData } from "@/data/projects";
 import { insightsData } from "@/data/insights";
+import { businessInfo } from "@/data/business-info";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://dadasit.com";
+  const baseUrl = businessInfo.websiteUrl;
 
   const staticRoutes = [
     "",

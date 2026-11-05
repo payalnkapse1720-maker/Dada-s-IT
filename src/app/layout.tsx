@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
+import { businessInfo } from "@/data/business-info";
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -11,6 +12,10 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(businessInfo.websiteUrl),
+  alternates: {
+    canonical: "/",
+  },
   title: "DADA'S I.T Services & Security Solutions | Enterprise Infrastructure & CCTV",
   description:
     "Leading enterprise IT infrastructure, structural cabling, AI CCTV surveillance, biometric access control, server sales, ITFMS, and Annual Maintenance Contracts (AMC). Serving Ador Welding, MCA Mumbai, Godrej Lawkim and 200+ corporations.",
@@ -31,6 +36,11 @@ export const metadata: Metadata = {
   authors: [{ name: "DADA'S I.T Services & Security Solutions" }],
   creator: "DADA'S I.T",
   publisher: "DADA'S I.T",
+  icons: {
+    icon: businessInfo.logoPath,
+    shortcut: businessInfo.logoPath,
+    apple: businessInfo.logoPath,
+  },
   formatDetection: {
     email: false,
     address: false,
@@ -40,16 +50,25 @@ export const metadata: Metadata = {
     title: "DADA'S I.T Services & Security Solutions",
     description:
       "Enterprise IT Infrastructure, Advanced CCTV Surveillance, Biometrics, Server Management & Facility AMC.",
-    url: "https://dadasit.com",
+    url: businessInfo.websiteUrl,
     siteName: "DADA'S I.T Services & Security Solutions",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: `${businessInfo.websiteUrl}${businessInfo.logoPath}`,
+        width: 1600,
+        height: 1600,
+        alt: "DADA'S I.T Services & Security Solutions Official Logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "DADA'S I.T Services & Security Solutions",
     description:
       "Securing futures through intelligent IT infrastructure, 4K CCTV surveillance, and proactive facility management.",
+    images: [`${businessInfo.websiteUrl}${businessInfo.logoPath}`],
   },
   robots: {
     index: true,
@@ -75,10 +94,11 @@ export default function RootLayout({
     "@graph": [
       {
         "@type": "Organization",
-        "@id": "https://dadasit.com/#organization",
-        name: "DADA'S I.T Services & Security Solutions",
-        url: "https://dadasit.com",
-        logo: "https://dadasit.com/logo.png",
+        "@id": `${businessInfo.websiteUrl}/#organization`,
+        name: businessInfo.name,
+        url: businessInfo.websiteUrl,
+        logo: `${businessInfo.websiteUrl}${businessInfo.logoPath}`,
+        email: businessInfo.email,
         founder: {
           "@type": "Person",
           name: "Mr. Dada",
@@ -86,7 +106,8 @@ export default function RootLayout({
         },
         contactPoint: {
           "@type": "ContactPoint",
-          telephone: "+91-9876543210",
+          telephone: businessInfo.phone,
+          email: businessInfo.email,
           contactType: "customer service",
           areaServed: "IN",
           availableLanguage: ["English", "Hindi", "Marathi"],
@@ -94,35 +115,19 @@ export default function RootLayout({
       },
       {
         "@type": "LocalBusiness",
-        "@id": "https://dadasit.com/#localbusiness",
-        name: "DADA'S I.T Services & Security Solutions",
-        image: "https://dadasit.com/og-image.jpg",
-        telephone: "+91-9876543210",
-        priceRange: "$$",
+        "@id": `${businessInfo.websiteUrl}/#localbusiness`,
+        name: businessInfo.name,
+        url: businessInfo.websiteUrl,
+        image: `${businessInfo.websiteUrl}${businessInfo.logoPath}`,
+        telephone: businessInfo.phone,
+        email: businessInfo.email,
         address: {
           "@type": "PostalAddress",
+          streetAddress: businessInfo.address,
           addressLocality: "Pune",
           addressRegion: "Maharashtra",
+          postalCode: "411041",
           addressCountry: "IN",
-        },
-        geo: {
-          "@type": "GeoCoordinates",
-          latitude: "18.5204",
-          longitude: "73.8567",
-        },
-        openingHoursSpecification: {
-          "@type": "OpeningHoursSpecification",
-          dayOfWeek: [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-          ],
-          opens: "00:00",
-          closes: "23:59",
         },
       },
     ],

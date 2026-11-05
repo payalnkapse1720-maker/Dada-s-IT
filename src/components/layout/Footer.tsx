@@ -2,7 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { Shield, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Mail, Phone, MapPin, ArrowRight } from "lucide-react";
+import { businessInfo } from "@/data/business-info";
 
 export default function Footer() {
   return (
@@ -18,8 +20,14 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-5">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm">
-                <Shield className="w-5 h-5" />
+              <div className="w-12 h-12 relative flex items-center justify-center shrink-0">
+                <Image
+                  src={businessInfo.logoPath}
+                  alt="DADA'S I.T Services & Security Solutions Official Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-contain rounded-xl"
+                />
               </div>
               <div className="flex flex-col">
                 <span className="font-extrabold text-2xl tracking-tight text-white">
@@ -33,21 +41,28 @@ export default function Footer() {
             <p className="text-surface-variant text-sm max-w-md leading-relaxed">
               Securing futures through intelligent infrastructure, high-definition AI surveillance, mission-critical server management, and uncompromising technical excellence.
             </p>
-            <div className="space-y-2 pt-2 text-sm text-surface-variant">
-              <div className="flex items-center gap-3">
-                <MapPin className="w-4 h-4 text-primary-container shrink-0" />
-                <span>Pune &amp; Mumbai, Maharashtra, India</span>
+            <div className="space-y-3 pt-2 text-sm text-surface-variant">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-4 h-4 text-primary-container shrink-0 mt-0.5" />
+                <a
+                  href={businessInfo.googleMapsLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors text-xs leading-relaxed"
+                >
+                  {businessInfo.address}
+                </a>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-primary-container shrink-0" />
-                <a href="tel:+919876543210" className="hover:text-white transition-colors">
-                  +91 (0) 20 2500 XXXX / +91 98XXX XXXXX
+                <a href={businessInfo.phoneLink} className="hover:text-white transition-colors">
+                  {businessInfo.phone}
                 </a>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-primary-container shrink-0" />
-                <a href="mailto:contact@dadasit.com" className="hover:text-white transition-colors">
-                  contact@dadasit.com
+                <a href={businessInfo.emailLink} className="hover:text-white transition-colors">
+                  {businessInfo.email}
                 </a>
               </div>
             </div>

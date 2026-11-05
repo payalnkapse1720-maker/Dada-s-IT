@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, PhoneCall, ShieldCheck } from "lucide-react";
+import { businessInfo } from "@/data/business-info";
 
 export default function CTASection() {
   return (
@@ -35,7 +36,7 @@ export default function CTASection() {
               <ArrowRight className="w-4 h-4 text-primary" />
             </Link>
             <a
-              href="https://wa.me/919999999999?text=Hello%20DADA%27S%20I.T%20Team%2C%20I%20would%20like%20to%20inquire%20about%20your%20services"
+              href={`${businessInfo.whatsappLink}?text=Hello%20DADA%27S%20I.T%20Team%2C%20I%20would%20like%20to%20inquire%20about%20your%20services`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-md text-white font-manrope font-bold text-sm rounded-full border border-white/20 hover:bg-white/20 transition-all flex items-center justify-center gap-2"

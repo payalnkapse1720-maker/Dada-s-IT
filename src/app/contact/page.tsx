@@ -1,7 +1,9 @@
 import React from "react";
 import { Metadata } from "next";
-import { Mail, Phone, MapPin, Clock, ShieldCheck, CheckCircle2, Headphones, AlertTriangle } from "lucide-react";
+import Image from "next/image";
+import { Mail, Phone, MapPin, Clock, ShieldCheck, CheckCircle2, Headphones } from "lucide-react";
 import ConsultationForm from "@/components/forms/ConsultationForm";
+import { businessInfo } from "@/data/business-info";
 
 export const metadata: Metadata = {
   title: "Consult an Expert & Contact | DADA'S I.T Services & Security Solutions",
@@ -32,9 +34,26 @@ export default function ContactPage() {
           {/* Left Column: HQ Details, Response Promise, Map */}
           <div className="lg:col-span-5 space-y-8">
             <div className="surface-card p-8 rounded-3xl border border-outline-variant/30 space-y-6">
-              <h2 className="text-2xl font-bold text-on-surface font-manrope">
-                Global Operations &amp; Headquarters
-              </h2>
+              <div className="flex items-center gap-3.5 pb-2 border-b border-outline-variant/20">
+                <div className="w-12 h-12 relative flex items-center justify-center shrink-0">
+                  <Image
+                    src={businessInfo.logoPath}
+                    alt="DADA'S I.T Services & Security Solutions Official Logo"
+                    width={48}
+                    height={48}
+                    priority
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-on-surface font-manrope leading-tight">
+                    Operations &amp; Headquarters
+                  </h2>
+                  <span className="text-[11px] uppercase font-bold tracking-wider text-primary font-manrope">
+                    Official Corporate Office
+                  </span>
+                </div>
+              </div>
 
               <div className="space-y-4 text-sm text-on-surface-variant">
                 <div className="flex items-start gap-3.5">
@@ -42,10 +61,15 @@ export default function ContactPage() {
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-on-surface font-manrope">Primary Operations Hub</div>
-                    <p className="text-xs mt-0.5 leading-relaxed">
-                      Pune &amp; Mumbai Metropolitan Region, Maharashtra, India
-                    </p>
+                    <div className="font-bold text-on-surface font-manrope">Registered Office Address</div>
+                    <a
+                      href={businessInfo.googleMapsLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-on-surface-variant hover:text-primary transition-colors mt-0.5 leading-relaxed block"
+                    >
+                      {businessInfo.address}
+                    </a>
                   </div>
                 </div>
 
@@ -55,8 +79,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <div className="font-bold text-on-surface font-manrope">Direct Phone Inquiries</div>
-                    <a href="tel:+919876543210" className="text-xs text-primary font-bold hover:underline block mt-0.5">
-                      +91 (0) 20 2500 XXXX / +91 98XXX XXXXX
+                    <a href={businessInfo.phoneLink} className="text-xs text-primary font-bold hover:underline block mt-0.5">
+                      {businessInfo.phone}
                     </a>
                   </div>
                 </div>
@@ -66,9 +90,9 @@ export default function ContactPage() {
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-bold text-on-surface font-manrope">Email Communications</div>
-                    <a href="mailto:contact@dadasit.com" className="text-xs text-primary font-bold hover:underline block mt-0.5">
-                      contact@dadasit.com
+                    <div className="font-bold text-on-surface font-manrope">Official Email Communications</div>
+                    <a href={businessInfo.emailLink} className="text-xs text-primary font-bold hover:underline block mt-0.5">
+                      {businessInfo.email}
                     </a>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import WhatsAppFAB from "./WhatsAppFAB";
@@ -12,6 +13,12 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const [searchOpen, setSearchOpen] = useState(false);
+  const pathname = usePathname();
+  const isAdminRoute = pathname?.startsWith("/admin");
+
+  if (isAdminRoute) {
+    return <>{children}</>;
+  }
 
   return (
     <>

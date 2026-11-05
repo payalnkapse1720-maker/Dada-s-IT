@@ -107,3 +107,29 @@ export interface ProductQuoteFormData {
   quantity: number;
   notes?: string;
 }
+
+export interface InquiryRecord {
+  id?: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  inquiryType: "technical" | "sales" | "partnership" | "amc";
+  message: string;
+  createdAt?: unknown;
+  status: "new" | "in_progress" | "resolved" | "archived";
+}
+
+export interface QuoteRecord {
+  id?: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  companyName?: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+  createdAt?: unknown;
+  status: "pending" | "quoted" | "closed" | "rejected";
+}
